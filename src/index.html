@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@500&display=swap" rel="stylesheet">
+    <script>
+        function AreaSelectorDropDown() {
+            document.getElementById("myDropdown").classList.toggle("show");
+        }
+    </script>
+    <title>Space Debris Prediction</title>
+</head>
+<body>
+    <div id="debris-mouseover-name" class="debris-mouseover-name">
+        <div class="debris-info">
+            <p id="debris-name">
+            </p>
+        </div>
+    </div>
+    <div class="debris-card">
+        <div class="debris-info">
+            <label for="debris-search">Find debris by name</label>
+            <div class="debris-search-row">
+                <input id="debris-search" type="search" placeholder="e.g. ISS (ZARYA)">
+                <button id="debris-search-button" type="button">Find</button>
+            </div>
+            <p id="debris-search-status" aria-live="polite"></p>
+            <p id="debris-info" aria-live="polite">
+                Double-click a debris object to inspect it.
+            </p>
+            <fieldset id="object-details">
+                <legend>Object information and satellite map</legend>
+                <p id="object-details-status" aria-live="polite">Select an object to retrieve catalog-linked information and source references.</p>
+                <p id="object-details-summary" aria-live="polite"></p>
+                <div id="object-details-sources"></div>
+                <p id="object-map-status">Select an object to view its current TLE-propagated position.</p>
+                <iframe id="object-map" title="Google Maps satellite view of selected object position" loading="lazy" allowfullscreen hidden></iframe>
+                <a id="object-earth-link" target="_blank" rel="noopener noreferrer" hidden>Open selected position in Google Earth</a>
+                <a id="shared-earth-project-link" href="https://earth.google.com/earth/d/1x32UTLKcJW_3I0KARgoK1w3QT1-CfCXO?usp=sharing" target="_blank" rel="noopener noreferrer">Open shared Google Earth project</a>
+            </fieldset>
+            <label for="scenario-mode">Simulation scenario</label>
+            <select id="scenario-mode" class="scenario-select">
+                <option value="close-approach">Possible collision / close-approach screen (24h)</option>
+                <option value="natural-reentry">Natural re-entry estimate</option>
+                <option value="forced-reentry">What if it is de-orbited now? (Kalman + LSTM)</option>
+                <option value="bayesian-trajectory">Kalman + Bayesian trajectory forecast (experimental)</option>
+                <option value="collision-breakup">Hypothetical sudden collision / breakup (24h)</option>
+            </select>
+            <button id="predict-trajectory" class="prediction-button" type="button" disabled>Run selected scenario</button>
+            <button id="close-simulation" class="prediction-button" type="button" hidden>Close simulation and restore catalog</button>
+            <p id="prediction-status" aria-live="polite"></p>
+            <fieldset id="impact-assumptions">
+                <legend>Retrieved impact data and AI explanation</legend>
+                <p>Object mass and map details are retrieved from Wikidata, OpenStreetMap, and optionally Google Maps Geocoding. Gemini summarizes those retrieved facts and the scenario; it does not predict physical damage, casualties, or impact probability. The orbital LSTM predicts TLE-derived motion only.</p>
+                <p id="impact-data-status" aria-live="polite">Select an object to start public data lookup. Missing mass or population will be shown as unknown.</p>
+                <p id="ai-impact-summary" aria-live="polite">Run the de-orbit scenario to retrieve impact evidence and request a Gemini summary. Configure GEMINI_API_KEY on the server to enable AI summaries.</p>
+                <p>Damage and casualties are not estimated without verified fragment survival, impact physics, weather, and local population data.</p>
+            </fieldset>
+            <p id="estimation-status" aria-live="polite">Select an object to start its background LSTM engine. It checks for new TLE history every two hours and retrains when new snapshots are available.</p>
+        </div>
+    </div>
+    <div class="dropdown">
+        <button onclick="AreaSelectorDropDown()" class="dropbtn">Area Selector</button>
+        <div id="myDropdown" class="dropdown-content">
+            <div class=dropdown-item>
+            <span>Latitude (deg)</span> <input id="latitude-btn" class="number-field" type="number" min="-90" max="90" value="0"/>
+            </div>
+            <div class=dropdown-item>
+            <span>Longitude (deg)</span><input id="longitude-btn" class="number-field" type="number" min="-180" max="180" value="0"/>
+            </div>
+            <div class=dropdown-item>
+            <span>Altitude (km)</span> <input id="altitude-btn" class="number-field" type="number" min="1" value="500"/>
+            </div>
+            <div class=dropdown-item>
+            <span>Radius (km)</span>   <input id="radius-btn" class="number-field" type="number" min="1" value="100"/>
+            </div>
+            <div class=dropdown-item>
+            <span>Time (mins)</span>   <input id="period-btn" class="number-field" type="number" min="0" max="100" value="0"/>
+            </div>
+            <div class=dropdown-item>
+            <button id="area-selector-test" class="area-button">test</button>
+            </div>
+            <div class=dropdown-item>
+            <button id="area-selector-submit" class="area-button">submit</button>
+            </div>
+            <div class=dropdown-item>
+                <span>Num:&nbsp;</span><span id="number-of-debris-area">0</span>
+            </div>
+        </div>
+      </div>
+    <div class="slidecontainer">
+        <div class="simulation-controls">
+            <button id="play-button" type="button" aria-pressed="true">Pause</button>
+            <label for="playback-speed">Speed</label>
+            <select id="playback-speed">
+                <option value="1">1x real time</option>
+                <option value="60">60x</option>
+                <option value="600">600x</option>
+                <option value="3600">3600x</option>
+            </select>
+            <span>UTC <output id="simulation-clock"></output></span>
+        </div>
+        <p class="simulation-hint">Moving objects are propagated from TLEs at the selected speed.</p>
+        <label for="time-slider">Set time offset (hours):&nbsp;</label>
+        <output>0</output>
+        <input type="range" min="-24" max="24" step="0.25" value="0" class="slider" id="time-slider" oninput="this.previousElementSibling.value= this.value">
+        <button id="slider-button" class="slider-button">submit</button>
+    </div>
+    <div class="live-status">
+        <button id="refresh-tle-button" type="button">Refresh live TLEs</button>
+        <p id="simulation-status" aria-live="polite">Starting simulation...</p>
+    </div>
+    <div id="google-earth-container" aria-label="Google Photorealistic 3D Earth view"></div>
+    <p id="earth-location-status" class="earth-location-status" aria-live="polite">Click a place on the globe to look up its name from latitude and longitude.</p>
+    <fieldset id="earth-layer-controls" class="earth-layer-controls" hidden>
+        <legend>Globe layers</legend>
+        <label><input type="checkbox" data-map-layer="satellites" checked> Satellite catalog</label>
+        <label><input type="checkbox" data-map-layer="places" checked> Object and place labels</label>
+        <label><input type="checkbox" data-map-layer="scenarios" checked> Scenario paths and footprint</label>
+    </fieldset>
+    <canvas class="webgl"></canvas>
+</body>
+</html>

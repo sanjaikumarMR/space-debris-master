@@ -1,0 +1,3 @@
+export const REAL_EARTH_RADIUS = 6371;
+export const EARTH_RADIUS = 10;
+export const SCALE_RATIO = EARTH_RADIUS / REAL_EARTH_RADIUS;
