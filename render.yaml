@@ -1,13 +1,15 @@
+
 services:
   - type: web
     name: space-debris-prediction
     runtime: node
+    plan: free
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /healthz
     envVars:
       - key: NODE_VERSION
-        value: 20
+        value: "20"
       - key: SPACETRACK_IDENTITY
         sync: false
       - key: SPACETRACK_PASSWORD
